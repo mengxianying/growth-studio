@@ -1,26 +1,57 @@
-const projects = [
- {id:'website', category:'网站搭建', icon:'▧', color:'#e5f1da', title:'搭建你的业务网站', description:'用轻量工具，快速建立属于自己的线上名片。', detail:'一个清晰、易维护的网站，是独立业务的起点。先明确你想服务的人，再用简洁的页面说明你能提供的价值。', steps:['梳理受众、服务和核心目标','选择静态网站或适合自己的建站工具','发布最小版本，并根据反馈持续完善']},
- {id:'creator', category:'内容创作', icon:'✎', color:'#f6e8d7', title:'打造个人内容品牌', description:'分享你的专业与见解，让价值被更多人看见。', detail:'从熟悉的主题出发，持续记录、整理和分享。好的内容品牌建立在真实经验和长期信任之上。', steps:['确定一个你愿意长期分享的主题','选择合适的平台和稳定的更新节奏','倾听读者反馈，形成自己的内容体系']},
- {id:'tools', category:'效率工具', icon:'✳', color:'#e2edf3', title:'构建个人效率系统', description:'整理工作流程，把时间留给真正重要的事。', detail:'为重复工作建立简单可靠的流程，让工具为你的目标服务，而不是增加管理负担。', steps:['记录一周内重复出现的工作','选择最值得优化的一两个环节','定期复盘，保留真正有效的工具']},
- {id:'course', category:'内容创作', icon:'▷', color:'#f5edcf', title:'把经验做成线上课程', description:'将知识整理成体系，帮助更多人解决问题。', detail:'从一个具体问题出发设计课程，用小范围试讲验证需求，再逐步完善内容。', steps:['找到受众最想解决的问题','设计清晰的学习目标与练习','试讲并根据反馈改进课程']},
- {id:'store', category:'数字商业', icon:'◈', color:'#efe3f4', title:'探索数字产品', description:'把创意变成模板、资源或有用的小产品。', detail:'数字产品可以从一个小而具体的需求开始。先验证价值，再考虑自动化交付和持续迭代。', steps:['寻找你熟悉的细分需求','制作可供体验的最小产品','收集反馈并改善交付体验']},
- {id:'automation', category:'效率工具', icon:'⌘', color:'#e1eee7', title:'让日常工作自动化', description:'连接常用工具，减少重复操作与切换。', detail:'从高频、规则明确的任务开始尝试自动化，让流程更稳定，也让你有更多创造时间。', steps:['画出当前工作的关键步骤','选择适合的自动化工具','先小范围测试，再逐步扩展']}
-];
-const articles = [
- {id:'first-step',category:'独立创造',icon:'✳',color:'#dce9d2',title:'从一个想法开始：独立创造的第一步',description:'不需要一份完美的计划，先找到一个值得解决的小问题。',detail:'很多项目都从一个很小的问题开始。写下你观察到的不便、你擅长的事，以及你希望帮助的人。三者的交集，往往就是很好的起点。'},
- {id:'website-guide',category:'建站指南',icon:'▧',color:'#e8e5d6',title:'如何搭建一个清晰、有用的个人网站',description:'从内容结构到发布上线，用简单的方法建立线上据点。',detail:'一个好的个人网站首先需要让访客明白：你是谁、你能提供什么，以及如何进一步了解你。先写清楚内容，再考虑复杂的功能。'},
- {id:'workflow',category:'效率成长',icon:'↗',color:'#dce9e5',title:'为自己设计一套可持续的工作节奏',description:'少一点盲目忙碌，多一点有方向的长期积累。',detail:'把目标拆成可执行的小步骤，为深度工作留出时间，也为休息留出空间。每周回顾一次，让你的节奏随着实际情况调整。'},
- {id:'content',category:'内容创作',icon:'✎',color:'#f1e3d8',title:'持续输出，从记录真实经验开始',description:'建立轻量的素材库，让分享成为自然的习惯。',detail:'不必每次都追求宏大主题。把解决问题的过程、一次有效的尝试和新的观察记录下来，就是有价值的素材。'},
- {id:'validation',category:'项目实践',icon:'◈',color:'#e8e5f2',title:'在投入之前，先验证你的产品想法',description:'用低成本的方式了解需求，找到更有价值的方向。',detail:'先和潜在用户交谈，了解他们现在如何解决问题。用简单的原型或说明验证兴趣，比过早开发完整产品更容易获得真实反馈。'},
- {id:'ai',category:'工具应用',icon:'⌘',color:'#edf0d6',title:'让 AI 成为你的创作搭档',description:'从整理思路到优化流程，找到适合自己的使用方式。',detail:'将 AI 用于头脑风暴、初稿整理和重复任务，可以腾出更多时间思考。对结果保持核查，并用自己的经验判断最终方向。'}
-];
-const projectList=document.querySelector('#project-list'),articleList=document.querySelector('#article-list'); let activeFilter='全部';
-function projectCard(p){return `<button class="project-card" data-type="project" data-id="${p.id}"><div class="card-top"><span class="project-icon" style="background:${p.color}">${p.icon}</span><span class="tag">${p.category}</span></div><h3>${p.title}</h3><p>${p.description}</p><div class="card-bottom"><span>探索项目 / EXPLORE</span><b>↗</b></div></button>`}
-function articleCard(a){return `<button class="article-card" data-type="article" data-id="${a.id}"><div class="article-art" style="background:${a.color}">${a.icon}</div><div class="article-body"><div class="article-meta">${a.category} &nbsp; / &nbsp; 5 MIN READ</div><h3>${a.title}</h3><p>${a.description}</p><span class="article-link">阅读全文 ↗</span></div></button>`}
-function render(){const visible=projects.filter(p=>activeFilter==='全部'||p.category===activeFilter);projectList.innerHTML=visible.map(projectCard).join('');articleList.innerHTML=articles.map(articleCard).join('');document.querySelector('#project-empty').hidden=visible.length>0}
-render();
-document.querySelector('#filters').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;activeFilter=b.dataset.filter;document.querySelectorAll('#filters button').forEach(x=>x.classList.toggle('active',x===b));render()});
-const detail=document.querySelector('#detail-dialog'),search=document.querySelector('#search-dialog');function showDetail(type,id){const item=(type==='project'?projects:articles).find(x=>x.id===id);if(!item)return;document.querySelector('#detail-content').innerHTML=`<span class="detail-badge">${item.category}</span><h2>${item.title}</h2><p>${item.description}</p><h3>关于${type==='project'?'这个项目':'这篇笔记'}</h3><p>${item.detail}</p>${item.steps?`<h3>可以从这里开始</h3><ol>${item.steps.map(s=>`<li>${s}</li>`).join('')}</ol>`:'<h3>从小处开始</h3><p>选择一个可以立即行动的小步骤，记录结果，并在实践中不断调整。</p>'}<p><small>这是示例内容，可在 app.js 中替换为你的实际内容。</small></p>`;if(search.open)search.close();detail.showModal()}
-document.addEventListener('click',e=>{const card=e.target.closest('[data-type][data-id]');if(card)showDetail(card.dataset.type,card.dataset.id)});document.querySelector('#detail-close').onclick=()=>detail.close();document.querySelectorAll('.search-open').forEach(b=>b.addEventListener('click',()=>{search.showModal();document.querySelector('#search-input').focus()}));
-const input=document.querySelector('#search-input'),results=document.querySelector('#search-results');input.addEventListener('input',()=>{const q=input.value.trim().toLowerCase();if(!q){results.innerHTML='';return}const matches=[...projects.map(p=>({...p,type:'project'})),...articles.map(a=>({...a,type:'article'}))].filter(x=>(x.title+x.description+x.category).toLowerCase().includes(q));results.innerHTML=matches.length?matches.map(x=>`<button type="button" class="result" data-type="${x.type}" data-id="${x.id}"><small>${x.type==='project'?'项目':'文章'} · ${x.category}</small>${x.title} ↗</button>`).join(''):'<p class="empty">没有找到相关内容。</p>'});
-const menu=document.querySelector('.mobile-menu'),toggle=document.querySelector('.menu-toggle');toggle.onclick=()=>{const open=menu.classList.toggle('open');toggle.setAttribute('aria-expanded',String(open))};menu.addEventListener('click',e=>{if(e.target.closest('a')){menu.classList.remove('open');toggle.setAttribute('aria-expanded','false')}});document.querySelector('.back-top').onclick=()=>window.scrollTo({top:0,behavior:'smooth'});[search,detail].forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()}));
+import {labels,escapeHtml as esc,money,api,post} from './shared.js';
+const $=s=>document.querySelector(s);
+let items=[];
+const reader=$('#reader');
+const link=x=>'#read/'+encodeURIComponent(x.id);
+function photo(x){return '<img loading="lazy" src="'+esc(x.cover||'desk.jpg')+'" alt="">'}
+function renderCatalog(){
+  const projects=items.filter(x=>x.kind==='project');
+  $('#project-list').innerHTML=projects.slice(0,3).map(x=>`<a class="project-card" href="${link(x)}"><figure>${photo(x)}</figure><small>${esc(x.category)}</small><h3>${esc(x.title)} <b>↗</b></h3><p>${esc(x.summary)}</p></a>`).join('')||'暂无已发布项目';
+  $('#article-list').innerHTML=items.filter(x=>x.kind==='article').map(x=>`<a href="${link(x)}"><small>${esc(x.category)}</small><h3>${esc(x.title)}</h3><span>↗</span></a>`).join('')||'暂无笔记';
+  $('#resource-list').innerHTML=items.filter(x=>['course','product'].includes(x.kind)).map(x=>`<a class="resource" href="${link(x)}">${photo(x)}<div><small>${labels[x.kind]}</small><h3>${esc(x.title)}</h3><p>${esc(x.summary)}</p><b>${x.kind==='course'?'查看课程':money(x.price)+' · 查看手册'} ↗</b></div></a>`).join('')||'暂无课程与手册';
+  $('#category').innerHTML='<option value="">全部分类</option>'+[...new Set(items.map(x=>x.category))].map(c=>'<option>'+esc(c)+'</option>').join('');
+  search();
+}
+function search(){
+  const q=$('#query').value.trim().toLowerCase();
+  const found=items.filter(x=>(!$('#kind').value||x.kind===$('#kind').value)&&(!$('#category').value||x.category===$('#category').value)&&(x.title+x.summary+x.category).toLowerCase().includes(q));
+  $('#matches').innerHTML=found.map(x=>`<a href="${link(x)}"><small>${labels[x.kind]}</small><strong>${esc(x.title)}</strong><span>↗</span></a>`).join('')||'<p>没有匹配的内容，请调整筛选条件。</p>';
+}
+function openReader(html){$('#detail').innerHTML=html;if(!reader.open)reader.showModal();reader.scrollTop=0}
+function readItem(x){
+  const gallery=JSON.parse(x.gallery||'[]');
+  openReader(`<small>${labels[x.kind]}　/　${esc(x.category)}</small><h2>${esc(x.title)}</h2><p class="lead">${esc(x.summary)}</p>${photo(x)}<div class="prose">${esc(x.body)}</div>${gallery.map(url=>'<img loading="lazy" alt="相册图片" src="'+esc(url)+'">').join('')}${x.kind==='product'?'<button class="gold-button" id="order">'+(x.price?'提交订单 · '+money(x.price):'免费领取手册')+'</button><p id="order-msg" role="status">'+(x.price?'提交后由工作室线下核款，并在订单页开放交付。':'')+'</p>':''}`);
+  if(x.kind==='product')$('#order').onclick=async e=>{
+    e.currentTarget.disabled=true;
+    try {const {id,token}=await post('orders',{item:x.id});location.hash='order/'+id+'/'+token;}
+    catch(error){$('#order-msg').textContent=error.message;$('#order').disabled=false;}
+  };
+}
+async function readOrder(id,token){
+  const headers={Authorization:'Bearer '+token};
+  const order=await api('orders/'+id,{headers});
+  const status={fulfilled:'已交付',pending:'待工作室确认',cancelled:'已取消'}[order.status];
+  openReader(`<small>订单　/　${status}</small><h2>${esc(order.title)}</h2><p>${money(order.price)} · ${esc(order.id)}</p><p>请收藏此页。链接内的凭证可查询订单和打开交付内容，请自行保管。</p><div class="prose">${esc(order.delivery)}</div>${order.file?'<button id="download" class="gold-button">下载文件 ↓</button>':''}`);
+  if(order.file)$('#download').onclick=async()=>{
+    const res=await fetch('/api/orders/'+id+'/file',{headers});
+    if(!res.ok)return openReader('<p>文件暂不可用，请刷新订单重试。</p>');
+    const blob=await res.blob(),url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=blob.type==='application/pdf'?'手册.pdf':'资料.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  };
+}
+async function route(){
+  const [view,id,token]=location.hash.slice(1).split('/');
+  try{
+    if(view==='order')return await readOrder(id,token);
+    if(view==='read'){const x=items.find(item=>item.id===id);return x?readItem(x):openReader('<p>此内容已下架。</p>');}
+    if(reader.open)reader.close();
+  }catch(error){openReader('<p>'+esc(error.message)+'</p>');}
+}
+function closeReader(){if(reader.open)reader.close();if(/^#(read|order)\//.test(location.hash))history.replaceState(null,'',location.pathname+location.search);}
+$('.close').onclick=closeReader;
+reader.addEventListener('cancel',closeReader);
+reader.addEventListener('click',e=>{if(e.target===reader)closeReader()});
+for(const id of ['#query','#kind','#category'])$(id).addEventListener('input',search);
+addEventListener('hashchange',route);
+try {const data=await api('catalog');items=data.items;$('#about').textContent=data.about;renderCatalog();await route();}
+catch(error){$('#project-list').textContent=error.message+'。刷新页面可重试。';}
