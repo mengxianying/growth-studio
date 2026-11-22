@@ -33,7 +33,7 @@ node --input-type=module -e "import {randomBytes,createHash} from 'node:crypto';
 
 主要文件为 `backend.mjs`（数据库与 API）、`admin.js`（后台）、`app.js`（前台）及 `seed.json`（首次导入的数据）。生产代码通过 Pages 直接上传部署，GitHub 用于保存源码。
 
-首页林间晨光摄影来自 [Unsplash](https://images.unsplash.com/photo-1441974231531-c6227db76b6e)。其余摄影素材来自 Unsplash，项目中保留了所用尺寸的副本：[森林](https://images.unsplash.com/photo-1448375240586-882707db888b)、[工作桌](https://images.unsplash.com/photo-1497215728101-856f4ea42174)、[写作](https://images.unsplash.com/photo-1455390582262-044cdead277a)、[工作室](https://images.unsplash.com/photo-1497366811353-6870744d04b2)。
+首页草地晨光摄影由 Radosław Krupa 拍摄，本站调整了暗部亮度与草木色调。[Pexels 原图](https://www.pexels.com/photo/sunbeams-on-green-grass-field-with-trees-11257958/) · [照片许可](https://www.pexels.com/license/) 。其余摄影素材来自 Unsplash，项目中保留了所用尺寸的副本：[森林](https://images.unsplash.com/photo-1448375240586-882707db888b)、[工作桌](https://images.unsplash.com/photo-1497215728101-856f4ea42174)、[写作](https://images.unsplash.com/photo-1455390582262-044cdead277a)、[工作室](https://images.unsplash.com/photo-1497366811353-6870744d04b2)。
 
 ## 中英文版本
 
