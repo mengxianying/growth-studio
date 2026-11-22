@@ -1,0 +1,87 @@
+{
+  "about": "Growth Studio collects projects, field notes and resources for independent creators. Start with a problem you want to solve, then explore the tools, courses and workbooks that can help you take the next step.",
+  "categories": {
+    "网站搭建": "Web development",
+    "内容创作": "Content creation",
+    "效率工具": "Productivity tools",
+    "数字商业": "Digital business",
+    "独立创造": "Independent work",
+    "建站指南": "Website guides",
+    "效率成长": "Working habits",
+    "项目实践": "Project practice",
+    "工具应用": "Tools in practice"
+  },
+  "items": {
+    "website": {
+      "title": "Build a website for your business",
+      "summary": "Give potential clients a place to find you and learn what you offer.",
+      "body": "A clear website that you can maintain yourself is a good starting point for an independent business. Decide who you want to serve, then explain what you can do for them.\n\nDescribe your audience, your services and what you want visitors to do.\n\nChoose a static site or a website builder you feel comfortable using.\n\nPublish the smallest useful version and improve it with feedback."
+    },
+    "creator": {
+      "title": "Find your voice as a creator",
+      "summary": "Share your expertise in a way readers can recognize and return to.",
+      "body": "Start with a subject you know. Collect your observations, organize them and share them regularly. Personal experience gives you something distinctive to say, and consistency helps readers learn to trust you.\n\nChoose a subject you would enjoy writing about for a long time.\n\nPick a platform and a publishing schedule you can sustain.\n\nListen to your readers and use their questions to shape future work."
+    },
+    "tools": {
+      "title": "Design a workflow that fits you",
+      "summary": "Organize recurring tasks and make time for the work that matters.",
+      "body": "Give repetitive work a simple, reliable process. A tool earns its place when it saves you more effort than it takes to manage.\n\nRecord the tasks you repeat over one week.\n\nChoose one or two steps where a change would make the biggest difference.\n\nReview your tools regularly and keep the ones that help."
+    },
+    "course": {
+      "title": "Turn your experience into a course",
+      "summary": "Organize what you know around a problem someone wants to solve.",
+      "body": "Design the course around one specific problem. Teach a short pilot to a small group and use what you learn to develop the material.\n\nFind out what your learners most want to accomplish.\n\nDefine a learning outcome and an exercise that demonstrates it.\n\nTeach the pilot and revise the lesson using learner feedback."
+    },
+    "store": {
+      "title": "Create a digital product",
+      "summary": "Turn an idea into a template, a resource or a small tool people can use.",
+      "body": "A digital product can begin with a narrow, concrete need. Test whether the idea is useful before investing in automated delivery or more features.\n\nLook for a specific need in a field you know.\n\nMake the smallest version someone can try.\n\nCollect feedback and improve how customers receive and use it."
+    },
+    "automation": {
+      "title": "Automate a recurring task",
+      "summary": "Connect the tools you use to cut down on repeated steps and context switching.",
+      "body": "Start with a frequent task that follows clear rules. A reliable automation can give you more time for creative work.\n\nMap the main steps in your current process.\n\nChoose a tool that fits those steps.\n\nTest it on a small scale before putting it to wider use."
+    },
+    "first-step": {
+      "title": "Find your first independent project",
+      "summary": "Start with one small problem worth solving.",
+      "body": "Many projects begin with a minor inconvenience. Write down a difficulty you have noticed, something you do well and a person you would like to help. Where those three overlap, you may have your first project."
+    },
+    "website-guide": {
+      "title": "What belongs on a personal website?",
+      "summary": "A practical way to plan, write and publish your own corner of the web.",
+      "body": "A visitor should be able to tell who you are, what you offer and how to learn more. Write clear answers to those three questions before adding more complicated features."
+    },
+    "workflow": {
+      "title": "Find a working rhythm you can sustain",
+      "summary": "Make time for small steps that add up over the long run.",
+      "body": "Break a goal into actions you can take. Reserve time for focused work and leave room for rest. Review your week and adapt your schedule to what actually happened."
+    },
+    "content": {
+      "title": "Write from what you do",
+      "summary": "Keep a small collection of observations to make publishing a habit.",
+      "body": "You can find useful material in ordinary work. Note how you solved a problem, what happened when you tried something new or what you noticed along the way. Each observation can become something worth sharing."
+    },
+    "validation": {
+      "title": "Test a product idea before you build",
+      "summary": "Use a small experiment to learn what potential customers value.",
+      "body": "Talk to potential users about how they solve the problem today. A simple prototype or a short description gives them something concrete to respond to before you invest in a finished product."
+    },
+    "ai": {
+      "title": "Work with AI as a creative partner",
+      "summary": "Try it on a real task, from sorting ideas to refining a workflow.",
+      "body": "Use AI to brainstorm, organize a first draft or handle a repetitive task. Check its output, then draw on your own experience to decide what to keep and which direction to take."
+    },
+    "launch-workshop": {
+      "title": "Launch your first service website",
+      "summary": "Build the first version of your services page in three exercises.",
+      "body": "Lesson 1 · Choose your audience\nDescribe a real client's problem and the specific result you can deliver.\n\nLesson 2 · Build the page\nShow the client's problem, an example of your work and a way to contact you. Ask a friend to read it on their phone.\n\nLesson 3 · Check and publish\nCheck the navigation, type size and contact link. After launch, record where your first inquiry came from.\n\nFinal exercise · The phone test\nSend the page to someone who has never seen it. Give them thirty seconds to identify whom you serve, what you deliver and how to contact you. Note where they pause and revise that part first."
+    },
+    "brief-kit": {
+      "title": "The project kickoff workbook",
+      "summary": "A reusable project brief, from interview questions to a plan for week one.",
+      "body": "The workbook includes interview prompts, a project brief and a first-week action plan. Claim a copy to read and copy the worksheet from your order page.",
+      "delivery": "Project name:\nWho is it for?\nHow did they solve this problem last time?\nHow much time or money does the current approach cost?\nWhat is the smallest useful result you can deliver this week?\nHow will you know the work is done?\nNext follow-up date:"
+    }
+  }
+}

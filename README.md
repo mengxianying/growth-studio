@@ -34,3 +34,9 @@ node --input-type=module -e "import {randomBytes,createHash} from 'node:crypto';
 主要文件为 `backend.mjs`（数据库与 API）、`admin.js`（后台）、`app.js`（前台）及 `seed.json`（首次导入的数据）。生产代码通过 Pages 直接上传部署，GitHub 用于保存源码。
 
 摄影素材来自 Unsplash，项目中保留了所用尺寸的副本：[森林](https://images.unsplash.com/photo-1448375240586-882707db888b)、[工作桌](https://images.unsplash.com/photo-1497215728101-856f4ea42174)、[写作](https://images.unsplash.com/photo-1455390582262-044cdead277a)、[工作室](https://images.unsplash.com/photo-1497366811353-6870744d04b2)。
+
+## 中英文版本
+
+[中文](https://growth-studio-atlas.pages.dev/?lang=zh) · [English](https://growth-studio-atlas.pages.dev/en)
+
+页首和阅读窗口均可切换语言。浏览器记住上次选择，分享的语言链接优先。后台的英文内容栏可维护译文；留空的字段在英文站显示中文原文。分类和工作室介绍也可维护英文。首次部署时，已有内容的译文从 `english.json` 导入 D1，以后在后台编辑。构建脚本根据 `interface-en.json` 生成英文页面与交互文案。

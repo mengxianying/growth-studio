@@ -1,5 +1,7 @@
 import seed from './seed.json' with {type:'json'};
 
+import english from './english.json' with {type:'json'};
+
 const publicFields = 'id,kind,category,title,summary,body,cover,gallery,price,updated';
 const kinds = ['project','article','course','product'];
 const schema = [
@@ -23,7 +25,7 @@ const ready = new WeakMap();
 function initialize(db) {
   if (ready.has(db)) return ready.get(db);
   const setup = (async () => {
-    try { if (await db.prepare('SELECT id FROM settings WHERE id=1').first()) return; }
+    try { if (await db.prepare('SELECT id FROM english_settings WHERE id=1').first()) return; }
     catch (error) { if (!String(error).includes('no such table')) throw error; }
     const statements = schema.map(s => db.prepare(s));
     statements.push(db.prepare('INSERT OR IGNORE INTO settings VALUES (1,?)').bind('生长计划记录独立创作者的项目、方法与作品。你可以从一个具体的问题出发，在这里找到工具、课程和可直接使用的手册。'));
@@ -31,6 +33,19 @@ function initialize(db) {
     for (const row of seed) {
       statements.push(db.prepare("INSERT OR IGNORE INTO contents(id,kind,category,title,summary,body,cover,price,delivery,status) VALUES (?,?,?,?,?,?,?,?,?,'published')").bind(row.id,row.kind,row.category,row.title,row.summary,row.body,row.cover,row.price,row.delivery || ''));
     }
+    statements.push(...[
+      "CREATE TABLE IF NOT EXISTS english_contents (id TEXT PRIMARY KEY REFERENCES contents(id), title TEXT NOT NULL, summary TEXT NOT NULL, body TEXT NOT NULL, delivery TEXT NOT NULL)",
+      "CREATE TABLE IF NOT EXISTS english_categories (name TEXT PRIMARY KEY REFERENCES categories(name), label TEXT NOT NULL)",
+      "CREATE TABLE IF NOT EXISTS english_orders (id TEXT PRIMARY KEY REFERENCES orders(id), title TEXT NOT NULL, delivery TEXT NOT NULL)",
+      "CREATE TABLE IF NOT EXISTS english_settings (id INTEGER PRIMARY KEY, about TEXT NOT NULL)"
+    ].map(sql => db.prepare(sql)));
+    for (const [id, item] of Object.entries(english.items)) {
+      statements.push(db.prepare('INSERT OR IGNORE INTO english_contents VALUES (?,?,?,?,?)').bind(id,item.title,item.summary,item.body,item.delivery || ''));
+    }
+    for (const [name,label] of Object.entries(english.categories)) {
+      statements.push(db.prepare('INSERT OR IGNORE INTO english_categories VALUES (?,?)').bind(name,label));
+    }
+    statements.push(db.prepare('INSERT OR IGNORE INTO english_settings VALUES (1,?)').bind(english.about));
     await db.batch(statements);
   })().catch(e => { ready.delete(db); throw e; });
   ready.set(db,setup);
@@ -51,7 +66,7 @@ function textField(value,max,required=false) {
 async function payload(req) {
   if (!req.headers.get('content-type')?.startsWith('application/json')) fail(415,'需要 JSON 数据');
   const raw=await req.text();
-  if (raw.length>80000) fail(413,'内容过长');
+  if (raw.length>180000) fail(413,'内容过长');
   let data;
   try { data=JSON.parse(raw); } catch { fail(400,'数据格式错误'); }
   if (!data || typeof data!=='object' || Array.isArray(data)) fail(400,'数据格式错误');
@@ -84,8 +99,13 @@ async function saveContent(db,data) {
   const attachment=textField(data.attachment,50);
   if(attachment && !await db.prepare('SELECT id FROM media WHERE id=? AND private=1').bind(attachment).first()) fail(400,'交付文件不存在');
   const fields=[id,data.kind,category,textField(data.title,120,true),textField(data.summary,500,true),textField(data.body,40000),imagePath(textField(data.cover,1800)),JSON.stringify(data.gallery.map(x=>imagePath(textField(x,1800,true)))),price,textField(data.delivery,20000),attachment,data.status];
-  await db.prepare(`INSERT INTO contents(id,kind,category,title,summary,body,cover,gallery,price,delivery,attachment,status)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET kind=excluded.kind,category=excluded.category,title=excluded.title,summary=excluded.summary,body=excluded.body,cover=excluded.cover,gallery=excluded.gallery,price=excluded.price,delivery=excluded.delivery,attachment=excluded.attachment,status=excluded.status,updated=CURRENT_TIMESTAMP`).bind(...fields).run();
+  const writes=[db.prepare(`INSERT INTO contents(id,kind,category,title,summary,body,cover,gallery,price,delivery,attachment,status)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET kind=excluded.kind,category=excluded.category,title=excluded.title,summary=excluded.summary,body=excluded.body,cover=excluded.cover,gallery=excluded.gallery,price=excluded.price,delivery=excluded.delivery,attachment=excluded.attachment,status=excluded.status,updated=CURRENT_TIMESTAMP`).bind(...fields)];
+  if (data.english) {
+    const en=data.english;
+    writes.push(db.prepare('INSERT INTO english_contents VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title, summary=excluded.summary, body=excluded.body, delivery=excluded.delivery').bind(id,textField(en.title,160),textField(en.summary,800),textField(en.body,50000),textField(en.delivery,30000)));
+  }
+  await db.batch(writes);
   return json({id});
 }
 async function upload(db,req,isPrivate) {
@@ -108,10 +128,23 @@ function fileResponse(row,download=false) {
 async function api(req,env) {
   const url=new URL(req.url), path=url.pathname, method=req.method;
   const db=env.DB;
+  const useEnglish=url.searchParams.get('lang')==='en';
   if (!db) fail(503,'数据库尚未连接');
   if(method!=='GET' && req.headers.get('origin') && req.headers.get('origin')!==url.origin) fail(403,'请求来源无效');
   await initialize(db);
   if(path==='/api/catalog' && method==='GET') {
+    if (useEnglish) {
+      const fields=publicFields.split(',').map(field=>{
+        if (['title','summary','body'].includes(field)) return `COALESCE(NULLIF(e.${field},''),c.${field}) AS ${field}`;
+        if (field==='category') return "COALESCE(NULLIF(k.label,''),c.category) AS category";
+        return 'c.'+field;
+      });
+      const [items,settings]=await db.batch([
+        db.prepare("SELECT "+fields.join(',')+" FROM contents c LEFT JOIN english_contents e ON e.id=c.id LEFT JOIN english_categories k ON k.name=c.category WHERE c.status='published' ORDER BY c.updated DESC,c.rowid"),
+        db.prepare("SELECT COALESCE(NULLIF(e.about,''),s.about) AS about FROM settings s LEFT JOIN english_settings e ON e.id=s.id WHERE s.id=1")
+      ]);
+      return json({items:items.results,about:settings.results[0].about});
+    }
     const [items,settings]=await db.batch([db.prepare('SELECT '+publicFields+" FROM contents WHERE status='published' ORDER BY updated DESC,rowid"),db.prepare('SELECT about FROM settings WHERE id=1')]);
     return json({items:items.results,about:settings.results[0].about});
   }
@@ -122,7 +155,9 @@ async function api(req,env) {
     if(!item) fail(404,'商品已下架');
     await limit(db,req,'order',25);
     const id=crypto.randomUUID(),token=crypto.randomUUID()+crypto.randomUUID();
-    await db.prepare('INSERT INTO orders(id,token_hash,item,title,price,status,delivery,attachment) VALUES (?,?,?,?,?,?,?,?)').bind(id,await digest(token),item.id,item.title,item.price,item.price?'pending':'fulfilled',item.delivery,item.attachment).run();
+    const createOrder=db.prepare('INSERT INTO orders(id,token_hash,item,title,price,status,delivery,attachment) VALUES (?,?,?,?,?,?,?,?)').bind(id,await digest(token),item.id,item.title,item.price,item.price?'pending':'fulfilled',item.delivery,item.attachment);
+    const translateOrder=db.prepare('INSERT INTO english_orders SELECT ?, title,delivery FROM english_contents WHERE id=?').bind(id,item.id);
+    await db.batch([createOrder,translateOrder]);
     return json({id,token},201);
   }
   if(path.startsWith('/api/orders/') && method==='GET') {
@@ -135,7 +170,8 @@ async function api(req,env) {
       if(!released) fail(403,'订单尚未确认');
       return fileResponse(await db.prepare('SELECT mime,bytes FROM media WHERE id=? AND private=1').bind(order.attachment).first(),true);
     }
-    return json({id:order.id,title:order.title,price:order.price,status:order.status,delivery:released?order.delivery:'',file:released&&Boolean(order.attachment)});
+    const translation=useEnglish ? await db.prepare('SELECT title,delivery FROM english_orders WHERE id=?').bind(order.id).first() : null;
+    return json({id:order.id,title:translation?.title||order.title,price:order.price,status:order.status,delivery:released?(translation?.delivery||order.delivery):'',file:released&&Boolean(order.attachment)});
   }
   if(path==='/api/login' && method==='POST') {
     const {key}=await payload(req);
@@ -155,17 +191,25 @@ async function api(req,env) {
   }
   if(path==='/api/admin/state' && method==='GET') {
     const [items,categories,orders,settings,metrics]=await db.batch(['SELECT * FROM contents ORDER BY updated DESC,rowid','SELECT name FROM categories ORDER BY name','SELECT id,title,price,status,created FROM orders ORDER BY created DESC,rowid DESC LIMIT 250','SELECT about FROM settings WHERE id=1',"SELECT COUNT(*) AS total, COUNT(CASE WHEN status='pending' THEN 1 END) AS pending, COALESCE(SUM(CASE WHEN status='fulfilled' THEN price END),0) AS revenue FROM orders"].map(s=>db.prepare(s)));
-    return json({items:items.results,categories:categories.results.map(x=>x.name),orders:orders.results,about:settings.results[0].about,metrics:metrics.results[0]});
+    const [translations,categoryLabels,site]=await db.batch([
+      db.prepare('SELECT * FROM english_contents'),db.prepare('SELECT * FROM english_categories'),db.prepare('SELECT about FROM english_settings WHERE id=1')
+    ]);
+    const byId=new Map(translations.results.map(x=>[x.id,x]));
+    return json({items:items.results.map(x=>({...x,english:byId.get(x.id)||{}})),categoryLabels:Object.fromEntries(categoryLabels.results.map(x=>[x.name,x.label])),aboutEn:site.results[0].about,categories:categories.results.map(x=>x.name),orders:orders.results,about:settings.results[0].about,metrics:metrics.results[0]});
   }
   if(path==='/api/admin/content' && method==='POST') return saveContent(db,await payload(req));
   if(path==='/api/admin/category' && method==='POST') {
-    const {name}=await payload(req);
-    await db.prepare('INSERT OR IGNORE INTO categories VALUES (?)').bind(textField(name,60,true)).run();
+    const data=await payload(req), name=textField(data.name,60,true);
+    const writes=[db.prepare('INSERT OR IGNORE INTO categories VALUES (?)').bind(name)];
+    if ('label' in data) writes.push(db.prepare('INSERT INTO english_categories VALUES (?,?) ON CONFLICT(name) DO UPDATE SET label=excluded.label').bind(name,textField(data.label,90)));
+    await db.batch(writes);
     return json({ok:true});
   }
   if(path==='/api/admin/settings' && method==='POST') {
     const data=await payload(req);
-    await db.prepare('UPDATE settings SET about=? WHERE id=1').bind(textField(data.about,4000,true)).run();
+    const writes=[db.prepare('UPDATE settings SET about=? WHERE id=1').bind(textField(data.about,4000,true))];
+    if ('aboutEn' in data) writes.push(db.prepare('UPDATE english_settings SET about=? WHERE id=1').bind(textField(data.aboutEn,6000)));
+    await db.batch(writes);
     return json({ok:true});
   }
   if(path==='/api/admin/media' && method==='POST') return upload(db,req,url.searchParams.get('private')==='1');
