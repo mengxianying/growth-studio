@@ -3,7 +3,7 @@ import {readFile,writeFile,copyFile,mkdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
 const out=resolve(process.argv[2] || 'dist');
 await mkdir(out,{recursive:true});
-const files=['index.html','admin.html','style.css','app.js','admin.js','shared.js','language.js','desk.jpg','notes.jpg','studio.jpg','forest.jpg','seedling.jpg'];
+const files=['index.html','admin.html','style.css','app.js','admin.js','shared.js','language.js','desk.jpg','notes.jpg','studio.jpg','forest.jpg','woodland-dawn.jpg'];
 for(const file of files) await copyFile(file,resolve(out,file));
 const seed=await readFile('seed.json','utf8');
 let worker=(await readFile('backend.mjs','utf8')).replace(/^import seed [^\n]+/,()=> 'const seed = '+seed+';');
