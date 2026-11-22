@@ -2,6 +2,9 @@ import seed from './seed.json' with {type:'json'};
 
 import english from './english.json' with {type:'json'};
 
+import { accountApi, initializeAccounts } from './account.mjs';
+import { initializePayments, paymentApi, paymentConfig, createWechat, createAlipay, createStripe } from './payments.mjs';
+
 const publicFields = 'id,kind,category,title,summary,body,cover,gallery,price,updated';
 const kinds = ['project','article','course','product'];
 const schema = [
@@ -93,7 +96,7 @@ async function saveContent(db,data) {
   if (!/^[a-zA-Z0-9_-]{1,64}$/.test(id) || !kinds.includes(data.kind) || !['draft','published'].includes(data.status)) fail(400,'无效的内容类型或发布状态');
   const category=textField(data.category,60,true);
   if (!await db.prepare('SELECT name FROM categories WHERE name=?').bind(category).first()) fail(400,'请选择已有分类');
-  const price=data.kind==='product'?data.price:0;
+  const price=['product','course'].includes(data.kind)?data.price:0;
   if (!Number.isSafeInteger(price)||price<0||price>100000000) fail(400,'金额超出范围');
   if (!Array.isArray(data.gallery)||data.gallery.length>8) fail(400,'相册最多支持八张图片');
   const attachment=textField(data.attachment,50);
@@ -130,8 +133,14 @@ async function api(req,env) {
   const db=env.DB;
   const useEnglish=url.searchParams.get('lang')==='en';
   if (!db) fail(503,'数据库尚未连接');
-  if(method!=='GET' && req.headers.get('origin') && req.headers.get('origin')!==url.origin) fail(403,'请求来源无效');
+  if(method!=='GET' && !['/api/payments/wechat/notify','/api/payments/alipay/notify','/api/payments/stripe/notify'].includes(path) && req.headers.get('origin') && req.headers.get('origin')!==url.origin) fail(403,'请求来源无效');
   await initialize(db);
+  await initializeAccounts(db);
+  await initializePayments(db);
+  const paymentResponse=await paymentApi(req,env,url);
+  if(paymentResponse) return paymentResponse;
+  const accountResponse=await accountApi(req,env,url);
+  if(accountResponse) return accountResponse;
   if(path==='/api/catalog' && method==='GET') {
     if (useEnglish) {
       const fields=publicFields.split(',').map(field=>{
@@ -195,7 +204,8 @@ async function api(req,env) {
       db.prepare('SELECT * FROM english_contents'),db.prepare('SELECT * FROM english_categories'),db.prepare('SELECT about FROM english_settings WHERE id=1')
     ]);
     const byId=new Map(translations.results.map(x=>[x.id,x]));
-    return json({items:items.results.map(x=>({...x,english:byId.get(x.id)||{}})),categoryLabels:Object.fromEntries(categoryLabels.results.map(x=>[x.name,x.label])),aboutEn:site.results[0].about,categories:categories.results.map(x=>x.name),orders:orders.results,about:settings.results[0].about,metrics:metrics.results[0]});
+    const courseOrders=await db.prepare('SELECT o.id,o.title,o.price,o.status,o.created,m.username,p.provider FROM course_orders o JOIN members m ON m.id=o.member_id LEFT JOIN payment_attempts p ON p.order_id=o.id ORDER BY o.created DESC LIMIT 250').all();
+    return json({courseOrders:courseOrders.results,items:items.results.map(x=>({...x,english:byId.get(x.id)||{}})),categoryLabels:Object.fromEntries(categoryLabels.results.map(x=>[x.name,x.label])),aboutEn:site.results[0].about,categories:categories.results.map(x=>x.name),orders:orders.results,about:settings.results[0].about,metrics:metrics.results[0]});
   }
   if(path==='/api/admin/content' && method==='POST') return saveContent(db,await payload(req));
   if(path==='/api/admin/category' && method==='POST') {
@@ -231,3 +241,5 @@ export default {
     }
   }
 };
+
+export { textField, fail, payload, limit, digest, json, fileResponse };

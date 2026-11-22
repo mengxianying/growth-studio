@@ -13,3 +13,23 @@
   .hero-layout{min-height:660px;padding-block:35px 14px}
   .hero-index{padding:6px 12px}
 }
+
+.account-button{border:0;background:transparent;padding:6px 4px;font-size:13px;white-space:nowrap}
+#account-dialog{width:min(460px,94vw);padding:34px}
+#account-dialog h2{font-size:32px;margin:10px 0}
+#account-dialog h3{font-size:19px}
+#account-dialog label{display:grid;gap:5px;margin:14px 0;font-size:13px}
+#account-dialog input,#account-dialog select{width:100%}
+.account-hint{color:var(--muted);font-size:13px}
+.verification-row{display:flex;gap:10px;align-items:end}
+.verification-row label{flex:1}
+.verification-row button{margin-bottom:14px;white-space:nowrap}
+.account-switch{display:block;border:0;background:transparent;padding:15px 0;color:#456948}
+.account-course{display:flex;width:100%;justify-content:space-between;text-align:left;margin:8px 0}
+#account-message:not(:empty){color:#85552d;font-size:13px}
+@media(max-width:520px){.mast .bar:has(nav){grid-template-columns:minmax(0,1fr) auto auto auto;gap:4px 8px}.bar:has(nav) .search-link{grid-column:2}.bar:has(nav) .account-button{grid-column:3;grid-row:1;font-size:12px}.bar:has(nav)>.lang-switch{grid-column:4;grid-row:1}}
+
+.payment-buttons{display:flex;gap:10px;flex-wrap:wrap}
+#course-purchase{margin-top:24px}
+#course-purchase #open-courses{margin-top:12px}
+#payment-qr svg{display:block;width:min(240px,100%);height:auto;background:white;margin:12px 0}

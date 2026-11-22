@@ -40,3 +40,19 @@ node --input-type=module -e "import {randomBytes,createHash} from 'node:crypto';
 [中文](https://growth-studio-atlas.pages.dev/?lang=zh) · [English](https://growth-studio-atlas.pages.dev/en)
 
 页首和阅读窗口均可切换语言。浏览器记住上次选择，分享的语言链接优先。后台的英文内容栏可维护译文；留空的字段在英文站显示中文原文。分类和工作室介绍也可维护英文。首次部署时，已有内容的译文从 `english.json` 导入 D1，以后在后台编辑。构建脚本根据 `interface-en.json` 生成英文页面与交互文案。
+
+## 用户账户、课程和支付（待配置与真实联调）
+
+前台提供用户名、密码、邮箱验证码注册，并区分一人公司（OPC）和公司账户。课程在后台设置价格、公开介绍、交付内容和附件，用户登录后可在“我的课程”中查看已开通内容。密码采用带随机盐的 PBKDF2-SHA-256，验证码有效期 10 分钟。D1 会自动创建账户及课程订单所需的表，无需安装数据库服务。未配置邮件时不能注册，未配置相应支付渠道时不会创建该渠道的付费订单。
+
+邮箱发送使用 Resend。其免费计划当前为每天 100 封、每月 3,000 封，实际额度以 [Resend 定价](https://resend.com/pricing)为准。正式向任意地址发送需要自有域名，并在 Resend 添加及验证 DNS 记录。域名本身可能产生费用。确认发件域名后，在 Cloudflare Pages 生产环境设置以下密钥与变量，之后重新部署：
+- `RESEND_API_KEY`：Resend API 密钥。
+- `MAIL_FROM`：已验证域名下的发件地址，如 `Growth Studio <hello@example.com>`。
+- `EMAIL_CODE_SECRET`：独立随机生成的长密钥，建议不少于 32 字节。不要与其他密钥共用。
+
+已实现的支付接口需要商户开通相应产品并完成平台联调。密钥应通过 Cloudflare 的加密 Secret 保存，不能放入仓库或聊天中。请在真实启用前使用各平台测试环境及小额订单核对下单、到账、回调、重复通知和交付，确认网站域名满足商户平台要求。支付处理仅在验签、核对商户及金额后开放课程。
+- 微信支付 Native 扫码需要开通 Native 产品并配置 `WX_APP_ID`、`WX_MCH_ID`、`WX_CERT_SERIAL`、`WX_PRIVATE_KEY`（PKCS#8 PEM）、`WX_PUBLIC_KEY_ID`、`WX_PUBLIC_KEY`（微信支付公钥 PEM）及 32 字节的 `WX_API_V3_KEY`。通知地址为 `https://你的域名/api/payments/wechat/notify`。
+- 支付宝电脑网站支付需要开通相应产品并配置 `ALIPAY_APP_ID`、`ALIPAY_SELLER_ID`、`ALIPAY_PRIVATE_KEY`（PKCS#8 PEM）、`ALIPAY_PUBLIC_KEY`（支付宝公钥 PEM）。异步通知地址为 `https://你的域名/api/payments/alipay/notify`。
+- Stripe Checkout 需要完成商户开户并配置 `STRIPE_SECRET_KEY` 和 `STRIPE_WEBHOOK_SECRET`。在 Stripe 控制台将 `checkout.session.completed` 和 `checkout.session.async_payment_succeeded` 通知发送至 `https://你的域名/api/payments/stripe/notify`，并启用账户和结算币种支持的支付方式。
+
+当前微信实现为桌面扫码，支付宝实现为电脑网站支付。手机内支付及订单过期、关闭、退款和对账流程仍需按商户实际产品配置完善。用户已有未支付订单时须继续使用原渠道，避免重复付款。课程收费内容应填写在“交付内容”或上传的私有附件中，课程介绍和正文会公开显示。当前交付支持文字和 PDF/ZIP 附件，视频托管与流媒体播放尚未实现。
