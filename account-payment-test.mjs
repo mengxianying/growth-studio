@@ -12,6 +12,14 @@ let emailCode;
 const originalFetch=globalThis.fetch;
 globalThis.fetch=async (url,opts)=>{
  if(String(url)==='https://api.resend.com/emails'){emailCode=JSON.parse(opts.body).text.match(/\d{6}/)[0];return Response.json({id:'test'});}
+ if(String(url)==='https://api.brevo.com/v3/smtp/email'){
+   const message=JSON.parse(opts.body);
+   assert.equal(opts.headers['api-key'],'mock-brevo-key');
+   assert.equal(message.sender.email,'verified@example.com');
+   assert.equal(message.to[0].email,'brevo-student@example.com');
+   emailCode=message.textContent.match(/\d{6}/)[0];
+   return Response.json({messageId:'mock-message'});
+ }
  if(String(url)==='https://api.stripe.com/v1/checkout/sessions')return Response.json({url:'https://checkout.stripe.com/c/pay/test'});
  if(String(url)==='https://api.mch.weixin.qq.com/v3/pay/transactions/native'){
    const body=JSON.stringify({code_url:'weixin://wxpay/bizpayurl?pr=test'}),timestamp=String(Math.floor(Date.now()/1000)),nonce='nonce';
@@ -22,6 +30,10 @@ globalThis.fetch=async (url,opts)=>{
 };
 const call=(path,opts={})=>worker.fetch(new Request('https://test.invalid/api/'+path,opts),env);
 const post=(path,data,headers={})=>call(path,{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(data)});
+env.BREVO_API_KEY='mock-brevo-key';env.MAIL_FROM='verified@example.com';
+assert.equal((await post('account/send-code',{email:'brevo-student@example.com'})).status,200);
+assert.match(emailCode,/^\d{6}$/);
+delete env.BREVO_API_KEY;env.MAIL_FROM='Test <test@example.com>';
 const adminLogin=await post('login',{key:'test-only'});const admin={Cookie:adminLogin.headers.get('set-cookie').split(';')[0]};
 const seed={kind:'course',category:'数字商业',title:'Paid course',summary:'course',body:'introduction',status:'published',delivery:'secret course',price:1200,gallery:[]};
 const create=async x=>(await (await post('admin/content',x,admin)).json()).id;

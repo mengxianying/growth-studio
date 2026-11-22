@@ -45,7 +45,9 @@ node --input-type=module -e "import {randomBytes,createHash} from 'node:crypto';
 
 前台提供用户名、密码、邮箱验证码注册，并区分一人公司（OPC）和公司账户。课程在后台设置价格、公开介绍、交付内容和附件，用户登录后可在“我的课程”中查看已开通内容。密码采用带随机盐的 PBKDF2-SHA-256，验证码有效期 10 分钟。D1 会自动创建账户及课程订单所需的表，无需安装数据库服务。未配置邮件时不能注册，未配置相应支付渠道时不会创建该渠道的付费订单。
 
-邮箱发送使用 Resend。其免费计划当前为每天 100 封、每月 3,000 封，实际额度以 [Resend 定价](https://resend.com/pricing)为准。正式向任意地址发送需要自有域名，并在 Resend 添加及验证 DNS 记录。域名本身可能产生费用。确认发件域名后，在 Cloudflare Pages 生产环境设置以下密钥与变量，之后重新部署：
+邮箱发送支持 Resend 和 Brevo。Brevo 可以使用已验证的个人邮箱作为发送方，平台可能将实际发件地址替换为其合规地址，交易邮件功能也可能需要审核。配置 `BREVO_API_KEY`、已验证的纯邮箱地址 `MAIL_FROM` 和随机的 `EMAIL_CODE_SECRET` 即可，具体额度及开通要求以 Brevo 控制台为准。
+
+Resend 方案需要独立域名，Resend 不接受 dynv6 的免费公共域名。其免费计划当前为每天 100 封、每月 3,000 封，实际额度以 [Resend 定价](https://resend.com/pricing)为准。正式向任意地址发送需要自有域名，并在 Resend 添加及验证 DNS 记录。域名本身可能产生费用。确认发件域名后，在 Cloudflare Pages 生产环境设置以下密钥与变量，之后重新部署：
 - `RESEND_API_KEY`：Resend API 密钥。
 - `MAIL_FROM`：已验证域名下的发件地址，如 `Growth Studio <hello@example.com>`。
 - `EMAIL_CODE_SECRET`：独立随机生成的长密钥，建议不少于 32 字节。不要与其他密钥共用。

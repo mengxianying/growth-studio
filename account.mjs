@@ -56,7 +56,7 @@ async function accountApi(req,env,url) {
   if(!path.startsWith('/api/account/')) return null;
   if(path==='/api/account/me' && method==='GET') return json({member:await currentMember(db,req)});
   if(path==='/api/account/send-code' && method==='POST') {
-    if(!env.RESEND_API_KEY || !env.MAIL_FROM || !env.EMAIL_CODE_SECRET) fail(503,'邮箱验证服务尚未配置');
+    if((!env.RESEND_API_KEY && !env.BREVO_API_KEY) || !env.MAIL_FROM || !env.EMAIL_CODE_SECRET) fail(503,'邮箱验证服务尚未配置');
     const data=await payload(req),email=normalizedEmail(data.email),now=Date.now();
     await limit(db,req,'email-code',8);
     if(await db.prepare('SELECT id FROM members WHERE email=?').bind(email).first()) fail(409,'该邮箱已注册，请直接登录');
@@ -69,7 +69,17 @@ async function accountApi(req,env,url) {
     if(!changed) fail(429,'请等待一分钟后再发送验证码');
     let response;
     try {
-      response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:env.MAIL_FROM,to:[email],subject:'生长计划 · 邮箱验证码 / Verification code',text:'您的注册验证码是 '+code+'，10 分钟内有效。\nYour verification code is '+code+'. It expires in 10 minutes.'})});
+      const subject='生长计划 · 邮箱验证码 / Verification code';
+      const message='您的注册验证码是 '+code+'，10 分钟内有效。\nYour verification code is '+code+'. It expires in 10 minutes.';
+      if(env.BREVO_API_KEY) {
+        response=await fetch('https://api.brevo.com/v3/smtp/email',{
+          method:'POST',
+          headers:{'api-key':env.BREVO_API_KEY,'Content-Type':'application/json'},
+          body:JSON.stringify({sender:{name:'Growth Studio',email:env.MAIL_FROM},to:[{email}],subject,textContent:message})
+        });
+      } else {
+        response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:env.MAIL_FROM,to:[email],subject,text:message})});
+      }
     } catch {
       await db.prepare('DELETE FROM email_codes WHERE email=? AND code_hash=?').bind(email,hash).run();
       fail(503,'邮件发送失败，请稍后重试');
