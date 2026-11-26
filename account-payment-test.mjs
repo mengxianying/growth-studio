@@ -1,0 +1,79 @@
+import {DatabaseSync} from 'node:sqlite';
+import assert from 'node:assert/strict';
+import {createHash,createHmac,generateKeyPairSync,sign,createCipheriv,randomBytes} from 'node:crypto';
+import worker from './backend.mjs';
+const sqlite=new DatabaseSync(':memory:');
+function query(sql,args=[]){return {bind(...a){return query(sql,a.map(v=>v instanceof ArrayBuffer?new Uint8Array(v):v))},first(){return sqlite.prepare(sql).get(...args)},all(){return {results:sqlite.prepare(sql).all(...args)}},run(){return {meta:sqlite.prepare(sql).run(...args)}},batch(){return {results:sqlite.prepare(sql).all(...args)}}};}
+const db={prepare:query,batch(stmts){sqlite.exec('BEGIN');try{const results=stmts.map(s=>s.batch());sqlite.exec('COMMIT');return results;}catch(e){sqlite.exec('ROLLBACK');throw e}}};
+const merchant=generateKeyPairSync('rsa',{modulusLength:2048}),platform=generateKeyPairSync('rsa',{modulusLength:2048});
+const privatePem=merchant.privateKey.export({type:'pkcs8',format:'pem'}),publicPem=platform.publicKey.export({type:'spki',format:'pem'});
+const env={DB:db,ADMIN_KEY_SHA256:createHash('sha256').update('test-only').digest('hex'),EMAIL_CODE_SECRET:'test secret with random entropy',RESEND_API_KEY:'test',MAIL_FROM:'Test <test@example.com>',ALIPAY_APP_ID:'app-test',ALIPAY_SELLER_ID:'seller-test',ALIPAY_PRIVATE_KEY:privatePem,ALIPAY_PUBLIC_KEY:publicPem,WX_APP_ID:'wx-test',WX_MCH_ID:'mch-test',WX_CERT_SERIAL:'merchant-test',WX_PRIVATE_KEY:privatePem,WX_PUBLIC_KEY_ID:'platform-test',WX_PUBLIC_KEY:publicPem,WX_API_V3_KEY:'01234567890123456789012345678901',STRIPE_SECRET_KEY:'sk_test_mock',STRIPE_WEBHOOK_SECRET:'whsec_test_mock'};
+let emailCode;
+const originalFetch=globalThis.fetch;
+globalThis.fetch=async (url,opts)=>{
+ if(String(url)==='https://api.resend.com/emails'){emailCode=JSON.parse(opts.body).text.match(/\d{6}/)[0];return Response.json({id:'test'});}
+ if(String(url)==='https://api.brevo.com/v3/smtp/email'){
+   const message=JSON.parse(opts.body);
+   assert.equal(opts.headers['api-key'],'mock-brevo-key');
+   assert.equal(message.sender.email,'verified@example.com');
+   assert.equal(message.to[0].email,'brevo-student@example.com');
+   emailCode=message.textContent.match(/\d{6}/)[0];
+   return Response.json({messageId:'mock-message'});
+ }
+ if(String(url)==='https://api.stripe.com/v1/checkout/sessions')return Response.json({url:'https://checkout.stripe.com/c/pay/test'});
+ if(String(url)==='https://api.mch.weixin.qq.com/v3/pay/transactions/native'){
+   const body=JSON.stringify({code_url:'weixin://wxpay/bizpayurl?pr=test'}),timestamp=String(Math.floor(Date.now()/1000)),nonce='nonce';
+   const signature=sign('RSA-SHA256',Buffer.from(timestamp+'\n'+nonce+'\n'+body+'\n'),platform.privateKey).toString('base64');
+   return new Response(body,{headers:{'Wechatpay-Timestamp':timestamp,'Wechatpay-Nonce':nonce,'Wechatpay-Signature':signature,'Wechatpay-Serial':'platform-test'}});
+ }
+ throw new Error('Unexpected external request '+url);
+};
+const call=(path,opts={})=>worker.fetch(new Request('https://test.invalid/api/'+path,opts),env);
+const post=(path,data,headers={})=>call(path,{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(data)});
+env.BREVO_API_KEY='mock-brevo-key';env.MAIL_FROM='verified@example.com';
+assert.equal((await post('account/send-code',{email:'brevo-student@example.com'})).status,200);
+assert.match(emailCode,/^\d{6}$/);
+delete env.BREVO_API_KEY;env.MAIL_FROM='Test <test@example.com>';
+const adminLogin=await post('login',{key:'test-only'});const admin={Cookie:adminLogin.headers.get('set-cookie').split(';')[0]};
+const seed={kind:'course',category:'数字商业',title:'Paid course',summary:'course',body:'introduction',status:'published',delivery:'secret course',price:1200,gallery:[]};
+const create=async x=>(await (await post('admin/content',x,admin)).json()).id;
+const first=await create(seed),second=await create({...seed,title:'Wechat course'}),free=await create({...seed,title:'Free course',price:0}),third=await create({...seed,title:'Stripe course'});
+assert.equal((await post('account/send-code',{email:'student@example.com'})).status,200);
+assert.equal((await post('account/send-code',{email:'student@example.com'})).status,429);
+assert.equal((await post('account/register',{email:'student@example.com',username:'student',password:'password-long',accountType:'opc',code:'999999'})).status,400);
+const register=await post('account/register',{email:'student@example.com',username:'student',password:'password-long',accountType:'opc',code:emailCode});
+assert.equal(register.status,200);const cookie={Cookie:register.headers.get('set-cookie').split(';')[0]};
+assert.equal((await post('account/login',{identity:'student',password:'wrong'})).status,401);
+assert.equal((await post('account/login',{identity:'student@example.com',password:'password-long'})).status,200);
+assert.equal((await post('account/course-order',{item:free,provider:'free'},cookie)).status,200);
+const freeOrder=(await (await call('account/courses',{headers:cookie})).json()).orders.find(x=>x.item===free);
+assert.equal((await (await call('account/courses/'+freeOrder.id,{headers:cookie})).json()).delivery,'secret course');
+const alipay=await post('account/course-order',{item:first,provider:'alipay'},cookie);assert.equal(alipay.status,200);
+const ao=await alipay.json();assert.ok(ao.url.startsWith('https://openapi.alipay.com/'));
+assert.equal((await call('account/courses/'+ao.id,{headers:cookie})).status,404);
+const params={app_id:'app-test',seller_id:'seller-test',trade_status:'TRADE_SUCCESS',total_amount:'12.00',out_trade_no:ao.id,sign_type:'RSA2'};
+const signed=Object.keys(params).filter(k=>k!=='sign_type').sort().map(k=>k+'='+params[k]).join('&');
+params.sign=sign('RSA-SHA256',Buffer.from(signed),platform.privateKey).toString('base64');
+const notify=async p=>call('payments/alipay/notify',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(p)});
+assert.equal((await notify({...params,total_amount:'0.01'})).status,401);
+assert.equal((await notify(params)).status,200);assert.equal((await notify(params)).status,200);
+assert.equal((await (await call('account/courses/'+ao.id,{headers:cookie})).json()).delivery,'secret course');
+const wx=await post('account/course-order',{item:second,provider:'wechat'},cookie);assert.equal(wx.status,200);const wo=await wx.json();assert.ok(wo.qr.startsWith('weixin://'));
+const clear=JSON.stringify({mchid:'mch-test',appid:'wx-test',trade_state:'SUCCESS',amount:{total:1200,currency:'CNY'},out_trade_no:wo.id});
+const nonce='123456789012',aad='transaction',cipher=createCipheriv('aes-256-gcm',Buffer.from(env.WX_API_V3_KEY),Buffer.from(nonce));cipher.setAAD(Buffer.from(aad));const ciphertext=Buffer.concat([cipher.update(clear),cipher.final(),cipher.getAuthTag()]).toString('base64');
+const body=JSON.stringify({event_type:'TRANSACTION.SUCCESS',resource:{algorithm:'AEAD_AES_256_GCM',nonce,associated_data:aad,ciphertext}});
+const timestamp=String(Math.floor(Date.now()/1000)),requestNonce='request-nonce',signature=sign('RSA-SHA256',Buffer.from(timestamp+'\n'+requestNonce+'\n'+body+'\n'),platform.privateKey).toString('base64');
+const headers={'Wechatpay-Timestamp':timestamp,'Wechatpay-Nonce':requestNonce,'Wechatpay-Signature':signature,'Wechatpay-Serial':'platform-test'};
+assert.equal((await call('payments/wechat/notify',{method:'POST',headers:{...headers,'Wechatpay-Signature':'bad'},body})).status,401);
+assert.equal((await call('payments/wechat/notify',{method:'POST',headers,body})).status,200);
+assert.equal((await (await call('account/courses/'+wo.id,{headers:cookie})).json()).delivery,'secret course');
+assert.equal((await call('account/courses/'+wo.id)).status,401);
+const stripe=await post('account/course-order',{item:third,provider:'stripe'},cookie);assert.equal(stripe.status,200);const so=await stripe.json();
+const stripeBody=JSON.stringify({type:'checkout.session.completed',data:{object:{payment_status:'paid',currency:'cny',amount_total:1200,client_reference_id:so.id,metadata:{order_id:so.id}}}});
+const stamp=String(Math.floor(Date.now()/1000)), stripeSignature=createHmac('sha256',env.STRIPE_WEBHOOK_SECRET).update(stamp+'.'+stripeBody).digest('hex');
+const stripeNotify=sig=>call('payments/stripe/notify',{method:'POST',headers:{'Stripe-Signature':sig},body:stripeBody});
+assert.equal((await stripeNotify('t='+stamp+',v1='+('0'.repeat(64)))).status,401);
+assert.equal((await stripeNotify('t='+stamp+',v1='+stripeSignature)).status,200);
+assert.equal((await (await call('account/courses/'+so.id,{headers:cookie})).json()).delivery,'secret course');
+globalThis.fetch=originalFetch;
+console.log('PASS account verification, sign-in, free access, signed payment notifications for all three providers, amount/signature rejection, idempotency and private course access');

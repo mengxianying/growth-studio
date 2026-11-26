@@ -34,6 +34,10 @@ function render(){
   else if(section==='categories')body=`<form id="category-form" class="controls"><input name="name" maxlength="60" required aria-label="分类名称" placeholder="中文分类名称"><input name="label" maxlength="90" placeholder="英文分类名称" aria-label="英文分类名称"><button>保存分类</button></form>${state.categories.map(c=>`<div class="row"><strong>${esc(c)} · ${esc(state.categoryLabels[c]||"—")}</strong><span>${state.items.filter(x=>x.category===c).length} 篇内容</span></div>`).join('')}`;
   else if(section==='settings')body=`<form id="settings-form"><label>工作室介绍<textarea name="about" rows="7" required maxlength="4000">${esc(state.about)}</textarea></label><label>英文工作室介绍<textarea name="aboutEn" rows="5" maxlength="6000">${esc(state.aboutEn)}</textarea></label><button class="gold-button">保存介绍</button></form>`;
   else if(section==='orders')body=state.orders.map(x=>`<div class="row order-row"><div><small>${esc(x.id)} · ${esc(x.created)} UTC</small><strong>${esc(x.title)} · ${money(x.price)}</strong></div>${badge(x.status)}${x.status==='pending'?`<button data-order="${x.id}" data-status="fulfilled">确认收款并交付</button><button data-order="${x.id}" data-status="cancelled">取消订单</button>`:''}</div>`).join('')||'<p class="muted">尚无订单。读者领取手册或提交商品订单后会出现在这里。</p>';
+  if(section==='orders') {
+    const courseRows=state.courseOrders.map(x=>`<div class="row order-row"><div><small>${esc(x.id)} · ${esc(x.username)} · ${esc(x.provider||'免费')}</small><strong>${esc(x.title)} · ${money(x.price)}</strong></div>${badge(x.status)}</div>`).join('')||'<p class="muted">尚无课程订单。</p>';
+    body='<h2>课程订单</h2>'+courseRows+'<h2>商品订单</h2>'+body;
+  }
   $('#panel').innerHTML=heading+body;
   if($('#new'))$('#new').onclick=()=>edit({kind:section,status:'draft',gallery:'[]',price:0});
   if($('#category-form'))$('#category-form').onsubmit=e=>{e.preventDefault();update(()=>post('admin/category',{name:e.currentTarget.name.value,label:e.currentTarget.label.value}),'分类已保存');};
@@ -45,7 +49,7 @@ $('#panel').onclick=e=>{
   if(b.dataset.order && confirm(b.textContent+'？'))update(()=>post('admin/order',{id:b.dataset.order,status:b.dataset.status}),'订单状态已更新');
 };
 function edit(x){
-  const isProduct=x.kind==='product',dialog=$('#edit');
+  const isProduct=['product','course'].includes(x.kind),dialog=$('#edit');
   $('#editor').innerHTML=`<p class="overline">${labels[x.kind]}</p><h2>${x.id?'编辑':'新建'}${labels[x.kind]}</h2><form id="content-form">
     <label>标题<input name="title" required maxlength="120" value="${esc(x.title)}"></label>
     <div class="form-grid"><label>分类<select name="category">${state.categories.map(c=>`<option value="${esc(c)}" ${c===x.category?'selected':''}>${esc((isEnglish && state.categoryLabels[c])||c)}</option>`).join('')}</select></label>
@@ -53,7 +57,7 @@ function edit(x){
     <label>简介<textarea name="summary" required maxlength="500" rows="2">${esc(x.summary)}</textarea></label>
     <label>封面地址<input name="cover" value="${esc(x.cover)}" placeholder="HTTPS 图片地址，或上传图片"></label>
     <label>上传封面（JPG / PNG，≤ 900 KB）<input type="file" data-upload="cover" accept="image/jpeg,image/png"></label>
-    <label>正文<textarea name="body" maxlength="40000" rows="7">${esc(x.body)}</textarea></label>
+    <label>${x.kind==='course'?'课程介绍（公开）':'正文'}<textarea name="body" maxlength="40000" rows="7">${esc(x.body)}</textarea></label>
     ${isProduct?`<label>售价（元）<input name="amount" type="number" min="0" max="1000000" step=".01" value="${(x.price||0)/100}" required></label>
     <label>商品相册（每行一张，最多八张）<textarea name="gallery" rows="3">${esc(JSON.parse(x.gallery||'[]').join('\n'))}</textarea></label><label>添加相册图片<input type="file" data-upload="gallery" accept="image/jpeg,image/png"></label>
     <label>交付内容（确认后可见）<textarea name="delivery" maxlength="20000" rows="4">${esc(x.delivery)}</textarea></label>
